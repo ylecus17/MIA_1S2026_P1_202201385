@@ -1,0 +1,176 @@
+/* src/Paginas/Inicio.css */
+.contenedor-inicio {
+  min-height: 100vh;
+  background-color: #9b9b9b;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.encabezado {
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.grupo-botones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.contenedor-input-archivo {
+  flex: 1;
+}
+
+.input-archivo {
+  display: none;
+}
+
+.boton-archivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #2563eb;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.boton-archivo:hover {
+  background-color: #1d4ed8;
+}
+
+.icono-archivo {
+  font-size: 1.25rem;
+}
+
+.nombre-archivo {
+  margin-left: 0.75rem;
+  color: #4b5563;
+}
+
+.botones-accion {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.boton-ejecutar {
+  background-color: #16a34a;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.boton-ejecutar:hover {
+  background-color: #15803d;
+}
+
+.boton-limpiar {
+  background-color: #dc2626;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.boton-limpiar:hover {
+  background-color: #b91c1c;
+}
+
+.contenedor-areas-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+}
+
+.contenedor-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.etiqueta-area {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #374151;
+}
+
+.area-texto {
+  flex: 1;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  width: 100%;
+  min-height: 120px;
+  max-height: 300px;
+  box-sizing: border-box;
+  border: 1px solid #d1d5db;
+  font-family: monospace;
+  resize: vertical;
+  overflow-y: auto;
+  background-color: white;
+}
+
+.area-entrada {
+  background-color: #f9fafb;
+}
+
+.area-salida {
+  background-color: #f3f4f6;
+}
+
+/* Estilos para la barra de desplazamiento */
+.area-texto::-webkit-scrollbar {
+  width: 10px;
+}
+
+.area-texto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.area-texto::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 5px;
+}
+
+.area-texto::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+.area-salida-consola {
+  background-color: #111;
+  color: #ddd;
+  font-family: monospace;
+  font-size: 14px;
+  height: 300px;          /* ajusta a lo que quieras */
+  overflow-y: auto;       /* scroll vertical */
+  padding: 10px;
+  border: 1px solid #444;
+  border-radius: 5px;
+  white-space: pre-wrap;
+}
+
+.log-success {
+  color: #4caf50; /* verde */
+}
+
+.log-error {
+  color: #f44336; /* rojo */
+}
+
+.log-info {
+  color: #9e9e9e; /* gris */
+}
