@@ -63,11 +63,7 @@ void ParseCommand(const std::string& input) {
         parseLogin(tokens);
     } else if (lower.rfind("logout", 0) == 0) {
         parseLogout(tokens);
-    /*/} else if (lower.rfind("rep", 0) == 0) {
-        parseRep(tokens);
-    
-    
-    } else if (lower.rfind("mkgrp", 0) == 0) {
+        } else if (lower.rfind("mkgrp", 0) == 0) {
         parseMkgrp(tokens);
     } else if (lower.rfind("cat", 0) == 0) {
         parseCat(tokens);
@@ -77,6 +73,11 @@ void ParseCommand(const std::string& input) {
         parseMkusr(tokens);
     } else if (lower.rfind("rmusr", 0) == 0) {
         parseRmusr(tokens);
+    /*/} else if (lower.rfind("rep", 0) == 0) {
+        parseRep(tokens);
+    
+    
+    
     } else if (lower.rfind("chgrp", 0) == 0) {
         parseChgrp(tokens);
     } else if (lower.rfind("mkdir", 0) == 0) {

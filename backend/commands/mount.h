@@ -15,8 +15,12 @@ struct MountedPartition {
     int32_t Start;        // Offset en el disco
 };
 extern std::vector<MountedPartition> mountedPartitions;
+// los vectores en c++ se forman  vector<tipo> nombreVector;
+// los vectores se mandan a llamar con el nombre del vector seguido de un punto y la función que se quiera usar, por ejemplo: mountedPartitions.push_back(mp); para agregar un elemento al vector
+// los vectores al estar en un extern se llaman igual pero sin el extern, por ejemplo: std::vector<MountedPartition> mountedPartitions; para definir el vector en un archivo .cpp
 // Funciones públicas del módulo mount
 bool Mount(const std::string& path, const std::string& name);
 void Mounted();
+MountedPartition* getMountById(const std::string& id);
 
 #endif // MOUNT_H

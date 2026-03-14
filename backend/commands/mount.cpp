@@ -13,6 +13,17 @@ std::vector<MountedPartition> mountedPartitions;
 std::map<std::string,std::string> diskLetters;
 std::map<std::string,int> partitionCounters;
 
+MountedPartition* getMountById(const std::string& id)
+{
+    for (auto &mp : mountedPartitions)
+    {
+        if (mp.ID == id)
+        {
+            return &mp;
+        }
+    }
+    return nullptr;
+}
 // ---------------- MOUNT ----------------
 bool Mount(const std::string& path, const std::string& name) {
     if (path.empty() || name.empty()) {

@@ -7,19 +7,10 @@
 #include <cmath>
 #include <ctime>
 #include <cstring>
+#include <algorithm>
 
 // Buscar partición montada por ID
-MountedPartition *getMountById(const std::string &id)
-{
-    for (auto &mp : mountedPartitions)
-    {
-        if (mp.ID == id)
-        {
-            return &mp;
-        }
-    }
-    return nullptr;
-}
+
 
 // ---------------- MKFS ----------------
 bool Mkfs(const std::string &id, const std::string &fstype)
@@ -49,27 +40,31 @@ bool Mkfs(const std::string &id, const std::string &fstype)
     }
 
     // Buscar partición por PartID
-    Partition *part = nullptr;
-    for (int i = 0; i < 4; i++)
+   // Buscar partición por nombre (el que guardó mount)
+Partition *part = nullptr;
+
+for (int i = 0; i < 4; i++)
+{
+    std::string pname(mbr.Partitions[i].PartName);
+
+    size_t pos = pname.find('\0');
+    if (pos != std::string::npos)
     {
-        std::string actualID(mbr.Partitions[i].PartID, sizeof(mbr.Partitions[i].PartID));
-        size_t pos = actualID.find('\0');
-        if (pos != std::string::npos)
-        {
-            actualID.erase(pos);
-        }
-        if (actualID == id)
-        {
-            part = &mbr.Partitions[i];
-            break;
-        }
-    }
-    if (!part)
-    {
-        common::AddError("[MKFS] Error: partición con ID " + id + " no encontrada");
-        return false;
+        pname.erase(pos);
     }
 
+    if (pname == mp->Name)
+    {
+        part = &mbr.Partitions[i];
+        break;
+    }
+}
+
+if (!part)
+{
+    common::AddError("[MKFS] Error: partición " + mp->Name + " no encontrada en el disco");
+    return false;
+}
     // Calcular estructuras
     int32_t inodeSize = sizeof(Inodo);
     int32_t blockSize = sizeof(BloqueArchivo);
@@ -99,7 +94,7 @@ bool Mkfs(const std::string &id, const std::string &fstype)
 
     // Crear carpeta raíz y users.txt
     crearRaiz(file, sb);
-    // crearUsersTxt(file, sb);
+    crearUsersTxt(file, sb);
 
     common::AddSuccess("[MKFS] Partición " + mp->Name + " lista con EXT2. Inodos=" +
                        std::to_string(sb.SInodesCount) + ", Bloques=" + std::to_string(sb.SBlocksCount));
@@ -154,13 +149,14 @@ void inicializarBitmaps(std::fstream &file, const SuperBloque &sb, int32_t n)
 }
 
 // ---------------- CREAR RAÍZ ----------------
+// ---------------- CREAR RAÍZ ----------------
 void crearRaiz(std::fstream &file, const SuperBloque &sb)
 {
     Inodo rootInode{};
     rootInode.IUid = 0;
     rootInode.IGid = 0;
     rootInode.ISize = 0;
-    rootInode.IType = '0';
+    rootInode.IType = '0'; // carpeta
     rootInode.IPerm[0] = '6';
     rootInode.IPerm[1] = '6';
     rootInode.IPerm[2] = '4';
@@ -171,7 +167,7 @@ void crearRaiz(std::fstream &file, const SuperBloque &sb)
 
     for (int i = 0; i < 15; i++)
         rootInode.IBlock[i] = -1;
-    rootInode.IBlock[0] = 0;
+    rootInode.IBlock[0] = 0; // apunta al bloque 0 (carpeta raíz)
 
     BloqueCarpeta rootBlock{};
     std::memset(&rootBlock, 0, sizeof(rootBlock));
@@ -179,17 +175,18 @@ void crearRaiz(std::fstream &file, const SuperBloque &sb)
     rootBlock.BContent[0].BInodo = 0;
     std::memcpy(rootBlock.BContent[1].BName, "..", 2);
     rootBlock.BContent[1].BInodo = 0;
+    // IMPORTANTE: aquí ya dejamos preparada la entrada para users.txt
     std::memcpy(rootBlock.BContent[2].BName, "users.txt", 9);
-    rootBlock.BContent[2].BInodo = 1;
+    rootBlock.BContent[2].BInodo = 1; // apunta al inodo 1
 
-    // Actualizar bitmaps
+    // Actualizar bitmaps: inodo 0 y bloque 0 ocupados
     file.seekp(sb.SBitmapInodeStart, std::ios::beg);
     char one = 1;
     file.write(&one, 1);
     file.seekp(sb.SBitmapBlockStart, std::ios::beg);
     file.write(&one, 1);
 
-    // Escribir inodo y bloque
+    // Escribir inodo raíz y bloque de carpeta raíz
     file.seekp(sb.SInodeStart, std::ios::beg);
     file.write(reinterpret_cast<char *>(&rootInode), sizeof(Inodo));
     file.seekp(sb.SBlockStart, std::ios::beg);
@@ -200,7 +197,7 @@ void crearRaiz(std::fstream &file, const SuperBloque &sb)
 void crearUsersTxt(std::fstream& file, const SuperBloque& sb) {
     std::string content = "1,G,root\n1,U,root,root,123\n";
 
-    // Inodo para users.txt
+    // Inodo para users.txt (inodo 1)
     Inodo usersInode{};
     usersInode.IUid = 1;
     usersInode.IGid = 1;
@@ -208,13 +205,11 @@ void crearUsersTxt(std::fstream& file, const SuperBloque& sb) {
     usersInode.IType = '1'; // archivo
     usersInode.IPerm[0] = '6'; usersInode.IPerm[1] = '6'; usersInode.IPerm[2] = '4';
 
-    // Fecha de creación
     std::time_t now = std::time(nullptr);
     std::string date = std::string(std::ctime(&now));
     std::memset(usersInode.ICtime, 0, sizeof(usersInode.ICtime));
     std::memcpy(usersInode.ICtime, date.c_str(), std::min(date.size(), sizeof(usersInode.ICtime)));
 
-    // Inicializar bloques
     for (int i = 0; i < 15; i++) usersInode.IBlock[i] = -1;
     usersInode.IBlock[0] = 1; // apunta al bloque 1
 
@@ -223,7 +218,7 @@ void crearUsersTxt(std::fstream& file, const SuperBloque& sb) {
     std::memset(usersBlock.BContent, 0, sizeof(usersBlock.BContent));
     std::memcpy(usersBlock.BContent, content.c_str(), std::min(content.size(), sizeof(usersBlock.BContent)));
 
-    // Actualizar bitmaps
+    // Actualizar bitmaps: inodo 1 y bloque 1 ocupados
     file.seekp(sb.SBitmapInodeStart + 1, std::ios::beg);
     char one = 1;
     file.write(&one, 1);
@@ -231,11 +226,11 @@ void crearUsersTxt(std::fstream& file, const SuperBloque& sb) {
     file.seekp(sb.SBitmapBlockStart + 1, std::ios::beg);
     file.write(&one, 1);
 
-    // Escribir inodo en posición correspondiente
+    // Escribir inodo users.txt en posición 1
     file.seekp(sb.SInodeStart + 1 * sizeof(Inodo), std::ios::beg);
     file.write(reinterpret_cast<char*>(&usersInode), sizeof(Inodo));
 
-    // Escribir bloque en posición correspondiente
+    // Escribir bloque de datos en posición 1
     file.seekp(sb.SBlockStart + 1 * sizeof(BloqueArchivo), std::ios::beg);
     file.write(reinterpret_cast<char*>(&usersBlock), sizeof(BloqueArchivo));
 }
