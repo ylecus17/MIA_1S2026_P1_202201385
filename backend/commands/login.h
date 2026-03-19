@@ -5,6 +5,7 @@
 #include "../structures/filesystem.h"   // SuperBloque, Inodo, Bloques
 #include "../structures/disk.h" 
 #include "mount.h" // MountedPartition
+#include <fstream>
 
 struct Sesion {
     std::string User;

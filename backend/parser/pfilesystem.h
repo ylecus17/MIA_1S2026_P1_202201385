@@ -10,6 +10,9 @@ void parseCat(const std::vector<std::string>& tokens);
 void parseMkusr(const std::vector<std::string> &tokens);
 void parseRmusr(const std::vector<std::string> &tokens);
 void parseRmgrp(const std::vector<std::string> &tokens);
+void parseChgrp(const std::vector<std::string> &tokens);
+void parseMkdir(const std::vector<std::string>& tokens);
+void parseMkfile(const std::vector<std::string>& tokens);
 
 
 

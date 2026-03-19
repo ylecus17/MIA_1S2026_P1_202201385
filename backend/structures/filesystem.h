@@ -1,5 +1,5 @@
-#ifndef EXT2_H
-#define EXT2_H
+#ifndef FILESYSTEM_H
+#define FILESYSTEM_H
 
 #include <cstdint>
 
@@ -35,7 +35,7 @@ struct Inodo {
     char    IMtime[20];
     int32_t IBlock[15];   // 12 directos, 3 indirectos
     char    IType;        // 0 = carpeta, 1 = archivo
-    char    IPerm[3];     // permisos UGO en octal, ej: "664"
+    char    IPerm[4];     // permisos UGO en octal, ej: "664"
 };
 
 // ---------------- BLOQUE CARPETA ----------------

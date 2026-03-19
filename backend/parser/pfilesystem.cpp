@@ -348,3 +348,148 @@ void parseRmusr(const std::vector<std::string> &tokens)
         common::AddSuccess("Usuario " + user + " eliminado correctamente");
     }
 }
+void parseChgrp(const std::vector<std::string>& tokens)
+{
+    std::string user;
+    std::string grp;
+
+    std::regex re("^-([a-zA-Z]+)=(.+)$");
+
+    for (size_t i = 1; i < tokens.size(); i++) {
+        std::smatch match;
+        if (std::regex_match(tokens[i], match, re)) {
+            std::string param = match[1].str();
+            std::string value = match[2].str();
+
+            // quitar comillas si las tiene
+            if (!value.empty() && value.front() == '"' && value.back() == '"') {
+                value = value.substr(1, value.size() - 2);
+            }
+
+            std::transform(param.begin(), param.end(), param.begin(), ::tolower);
+
+            if (param == "user") {
+                user = value;
+            } else if (param == "grp") {
+                grp = value;
+            } else {
+                common::AddError("[CHGRP] Error: parámetro desconocido " + param);
+                return;
+            }
+        } else {
+            common::AddError("[CHGRP] Error de sintaxis en parámetro: " + tokens[i]);
+            return;
+        }
+    }
+
+    if (user.empty() || grp.empty()) {
+        common::AddError("[CHGRP] Error: faltan parámetros obligatorios (-user, -grp)");
+        return;
+    }
+
+    if (!Chgrp(user, grp)) {
+        common::AddError("[CHGRP] Error ejecutando cambio de grupo");
+    }
+}
+void parseMkfile(const std::vector<std::string>& tokens)
+{
+    std::string path;
+    bool rFlag = false;
+    int size = 0;
+    std::string cont;
+
+    std::regex re("^-([a-zA-Z]+)=(.+)$");
+
+    for (size_t i = 1; i < tokens.size(); i++) {
+        std::smatch match;
+        if (std::regex_match(tokens[i], match, re)) {
+            std::string param = match[1].str();
+            std::string value = match[2].str();
+
+            // quitar comillas si las tiene
+            if (!value.empty() && value.front() == '"' && value.back() == '"') {
+                value = value.substr(1, value.size() - 2);
+            }
+
+            std::transform(param.begin(), param.end(), param.begin(), ::tolower);
+
+            if (param == "path") {
+                path = value;
+            } else if (param == "size") {
+                try {
+                    size = std::stoi(value);
+                    if (size < 0) {
+                        common::AddError("[MKFILE] Error: tamaño negativo");
+                        return;
+                    }
+                } catch (...) {
+                    common::AddError("[MKFILE] Error: tamaño inválido");
+                    return;
+                }
+            } else if (param == "cont") {
+                cont = value;
+            } else {
+                common::AddError("[MKFILE] Error: parámetro desconocido " + param);
+                return;
+            }
+        } else if (tokens[i] == "-r") {
+            rFlag = true;
+        } else {
+            common::AddError("[MKFILE] Error de sintaxis en parámetro: " + tokens[i]);
+            return;
+        }
+    }
+
+    if (path.empty()) {
+        common::AddError("[MKFILE] Error: falta parámetro obligatorio -path");
+        return;
+    }
+
+    if (!Mkfile(path, rFlag, size, cont)) {
+        common::AddError("[MKFILE] Error creando archivo");
+    }
+}
+void parseMkdir(const std::vector<std::string>& tokens)
+{
+    std::string path;
+    bool pFlag = false;
+
+    std::regex re("^-([a-zA-Z]+)=(.+)$");
+
+    for (size_t i = 1; i < tokens.size(); i++) {
+        std::smatch match;
+        if (std::regex_match(tokens[i], match, re)) {
+            std::string param = match[1].str();
+            std::string value = match[2].str();
+
+            // quitar comillas si las tiene
+            if (!value.empty() && value.front() == '"' && value.back() == '"') {
+                value = value.substr(1, value.size() - 2);
+            }
+
+            std::transform(param.begin(), param.end(), param.begin(), ::tolower);
+
+            if (param == "path") {
+                path = value;
+            } else {
+                common::AddError("[MKDIR] Error: parámetro desconocido " + param);
+                return;
+            }
+        } else if (tokens[i] == "-p") {
+            pFlag = true;
+        } else {
+            common::AddError("[MKDIR] Error de sintaxis en parámetro: " + tokens[i]);
+            return;
+        }
+    }
+
+    if (path.empty()) {
+        common::AddError("[MKDIR] Error: falta parámetro obligatorio -path");
+        return;
+    }
+
+    if (!Mkdir(path, pFlag)) {
+        common::AddError("[MKDIR] Error creando carpeta");
+    }
+}
+

@@ -49,18 +49,25 @@ bool Mkgrp(const std::string& name) {
     file.read(reinterpret_cast<char*>(&mbr), sizeof(MBR));
 
     Partition* part = nullptr;
-    for (int i = 0; i < 4; i++) {
-        std::string pid(mbr.Partitions[i].PartID);
-        pid.erase(std::remove(pid.begin(), pid.end(), '\0'), pid.end());
-        if (pid == CurrentSesion.ID) {
-            part = &mbr.Partitions[i];
-            break;
-        }
+for (int i = 0; i < 4; i++) {
+    std::string pname(mbr.Partitions[i].PartName);
+    pname.erase(std::remove(pname.begin(), pname.end(), '\0'), pname.end());
+
+    common::AddInfo("[DEBUG] Revisando partición: " + pname +
+                    " status=" + std::string(1, mbr.Partitions[i].PartStatus) +
+                    " mountName=" + mp->Name + " mountID=" + mp->ID);
+
+    if (pname == mp->Name) {
+        part = &mbr.Partitions[i];
+        break;
     }
-    if (!part) {
-        common::AddError("[MKGRP] Error: partición de sesión no encontrada");
-        return false;
-    }
+}
+
+if (!part) {
+    common::AddError("[MKGRP] Error: partición de sesión no encontrada");
+    return false;
+}
+
 
     SuperBloque sb;
     file.seekg(part->PartStart, std::ios::beg);
@@ -136,19 +143,26 @@ bool Rmgrp(const std::string& name) {
     file.seekg(0, std::ios::beg);
     file.read(reinterpret_cast<char*>(&mbr), sizeof(MBR));
 
-    Partition* part = nullptr;
-    for (int i = 0; i < 4; i++) {
-        std::string pid(mbr.Partitions[i].PartID);
-        pid.erase(std::remove(pid.begin(), pid.end(), '\0'), pid.end());
-        if (pid == CurrentSesion.ID) {
-            part = &mbr.Partitions[i];
-            break;
-        }
+Partition* part = nullptr;
+for (int i = 0; i < 4; i++) {
+    std::string pname(mbr.Partitions[i].PartName);
+    pname.erase(std::remove(pname.begin(), pname.end(), '\0'), pname.end());
+
+    common::AddInfo("[DEBUG] Revisando partición: " + pname +
+                    " status=" + std::string(1, mbr.Partitions[i].PartStatus) +
+                    " mountName=" + mp->Name + " mountID=" + mp->ID);
+
+    if (pname == mp->Name) {
+        part = &mbr.Partitions[i];
+        break;
     }
-    if (!part) {
-        common::AddError("[RMGRP] Error: partición de sesión no encontrada");
-        return false;
-    }
+}
+
+if (!part) {
+    common::AddError("[RMGRP] Error: partición de sesión no encontrada");
+    return false;
+}
+
 
     SuperBloque sb;
     file.seekg(part->PartStart, std::ios::beg);
@@ -280,18 +294,24 @@ bool Mkusr(const std::string& user, const std::string& pass, const std::string& 
     file.read(reinterpret_cast<char*>(&mbr), sizeof(MBR));
 
     Partition* part = nullptr;
-    for (int i = 0; i < 4; i++) {
-        std::string pid(mbr.Partitions[i].PartID);
-        pid.erase(std::remove(pid.begin(), pid.end(), '\0'), pid.end());
-        if (pid == CurrentSesion.ID) {
-            part = &mbr.Partitions[i];
-            break;
-        }
+for (int i = 0; i < 4; i++) {
+    std::string pname(mbr.Partitions[i].PartName);
+    pname.erase(std::remove(pname.begin(), pname.end(), '\0'), pname.end());
+
+    common::AddInfo("[DEBUG] Revisando partición: " + pname +
+                    " status=" + std::string(1, mbr.Partitions[i].PartStatus) +
+                    " mountName=" + mp->Name + " mountID=" + mp->ID);
+
+    if (pname == mp->Name) {
+        part = &mbr.Partitions[i];
+        break;
     }
-    if (!part) {
-        common::AddError("[MKUSR] Error: partición de sesión no encontrada");
-        return false;
-    }
+}
+
+if (!part) {
+    common::AddError("[MKUSR] Error: partición de sesión no encontrada");
+    return false;
+}
 
     SuperBloque sb;
     file.seekg(part->PartStart, std::ios::beg);
@@ -395,18 +415,24 @@ bool Rmusr(const std::string& user) {
 
     // 5. Buscar partición
     Partition* part = nullptr;
-    for (int i = 0; i < 4; i++) {
-        std::string pid(mbr.Partitions[i].PartID);
-        pid.erase(std::remove(pid.begin(), pid.end(), '\0'), pid.end());
-        if (pid == CurrentSesion.ID) {
-            part = &mbr.Partitions[i];
-            break;
-        }
+for (int i = 0; i < 4; i++) {
+    std::string pname(mbr.Partitions[i].PartName);
+    pname.erase(std::remove(pname.begin(), pname.end(), '\0'), pname.end());
+
+    common::AddInfo("[DEBUG] Revisando partición: " + pname +
+                    " status=" + std::string(1, mbr.Partitions[i].PartStatus) +
+                    " mountName=" + mp->Name + " mountID=" + mp->ID);
+
+    if (pname == mp->Name) {
+        part = &mbr.Partitions[i];
+        break;
     }
-    if (!part) {
-        common::AddError("[RMUSR] Error: partición de sesión no encontrada");
-        return false;
-    }
+}
+
+if (!part) {
+    common::AddError("[RMUSR] Error: partición de sesión no encontrada");
+    return false;
+}
 
     // 6. Leer superbloque
     SuperBloque sb;
@@ -461,5 +487,127 @@ bool Rmusr(const std::string& user) {
     }
 
     common::AddSuccess("[RMUSR] Usuario '" + user + "' eliminado correctamente");
+    return true;
+}
+bool Chgrp(const std::string& user, const std::string& newGrp)
+{
+    if (!CurrentSesion.Status) {
+        common::AddError("[CHGRP] Error: necesita iniciar sesión");
+        return false;
+    }
+    if (CurrentSesion.User != "root") {
+        common::AddError("[CHGRP] Error: solo el usuario root puede cambiar grupos");
+        return false;
+    }
+
+    MountedPartition* mp = getMountById(CurrentSesion.ID);
+    if (!mp) {
+        common::AddError("[CHGRP] Error: la partición de la sesión no está montada");
+        return false;
+    }
+
+    std::fstream file(mp->Path, std::ios::in | std::ios::out | std::ios::binary);
+    if (!file.is_open()) {
+        common::AddError("[CHGRP] Error abriendo disco: " + mp->Path);
+        return false;
+    }
+
+    // Leer MBR
+    MBR mbr;
+    file.seekg(0, std::ios::beg);
+    file.read(reinterpret_cast<char*>(&mbr), sizeof(MBR));
+
+    // Buscar partición por nombre
+    Partition* part = nullptr;
+    for (int i = 0; i < 4; i++) {
+        std::string pname(mbr.Partitions[i].PartName);
+        pname.erase(std::remove(pname.begin(), pname.end(), '\0'), pname.end());
+        if (pname == mp->Name) {
+            part = &mbr.Partitions[i];
+            break;
+        }
+    }
+    if (!part) {
+        common::AddError("[CHGRP] Error: partición de sesión no encontrada");
+        return false;
+    }
+
+    // Leer superbloque
+    SuperBloque sb;
+    file.seekg(part->PartStart, std::ios::beg);
+    file.read(reinterpret_cast<char*>(&sb), sizeof(SuperBloque));
+
+    // Leer users.txt
+    Inodo rootInode = readInode(file, sb.SInodeStart);
+    int usersInodeIndex = findFileInode(file, rootInode, sb, "users.txt");
+    if (usersInodeIndex == -1) {
+        common::AddError("[CHGRP] Error: archivo users.txt no encontrado");
+        return false;
+    }
+    Inodo usersInode = readInode(file, sb.SInodeStart + usersInodeIndex * sizeof(Inodo));
+    std::string content = readFileContent(file, usersInode, sb);
+    content.erase(std::remove(content.begin(), content.end(), '\0'), content.end());
+
+    // Separar líneas
+    std::istringstream iss(content);
+    std::string line;
+    std::vector<std::string> lines;
+    while (std::getline(iss, line)) {
+        lines.push_back(line);
+    }
+
+    // Validar que el grupo exista
+    bool groupExists = false;
+    for (auto& l : lines) {
+        std::stringstream ss(l);
+        std::vector<std::string> parts;
+        std::string token;
+        while (std::getline(ss, token, ',')) parts.push_back(token);
+
+        if (parts.size() >= 3 && parts[1] == "G" && parts[0] != "0") {
+            if (parts[2] == newGrp) {
+                groupExists = true;
+                break;
+            }
+        }
+    }
+    if (!groupExists) {
+        common::AddError("[CHGRP] Error: grupo '" + newGrp + "' no existe o está eliminado");
+        return false;
+    }
+
+    // Buscar usuario y cambiar grupo
+    bool found = false;
+    for (size_t i = 0; i < lines.size(); i++) {
+        std::stringstream ss(lines[i]);
+        std::vector<std::string> parts;
+        std::string token;
+        while (std::getline(ss, token, ',')) parts.push_back(token);
+
+        if (parts.size() == 5 && parts[1] == "U" && parts[0] != "0") {
+            if (parts[3] == user) {
+                // Reemplazar línea con nuevo grupo
+                lines[i] = parts[0] + ",U," + newGrp + "," + parts[3] + "," + parts[4];
+                found = true;
+                break;
+            }
+        }
+    }
+    if (!found) {
+        common::AddError("[CHGRP] Error: usuario '" + user + "' no existe o fue eliminado");
+        return false;
+    }
+
+    // Reescribir archivo
+    std::string newContent;
+    for (auto& l : lines) {
+        newContent += l + "\n";
+    }
+    if (!overwriteFile(file, usersInode, sb, newContent, usersInodeIndex)) {
+        common::AddError("[CHGRP] Error escribiendo users.txt");
+        return false;
+    }
+
+    common::AddSuccess("[CHGRP] Usuario '" + user + "' cambiado al grupo '" + newGrp + "'");
     return true;
 }
