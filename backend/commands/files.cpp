@@ -176,7 +176,7 @@ int findFolderInode(std::fstream& file, const SuperBloque& sb, const std::string
 
 // ===================== AGREGAR HIJO A CARPETA =====================
 
-bool addEntryToFolder(std::fstream& file, const SuperBloque& sb,
+bool addEntryToFolder(std::fstream& file, SuperBloque& sb,
                       int parentIndex, const std::string& name, int inodeIndex) {
 
     Inodo parent;
@@ -184,19 +184,47 @@ bool addEntryToFolder(std::fstream& file, const SuperBloque& sb,
     file.read(reinterpret_cast<char*>(&parent), sizeof(Inodo));
 
     for (int i = 0; i < 12; i++) {
-        if (parent.IBlock[i] == -1) continue;
+
+        if (parent.IBlock[i] == -1) {
+            // crear nuevo bloque
+            int newBlock = sb.SFirstBlo;
+
+            BloqueCarpeta block{};
+            for(int j=0;j<4;j++){
+                block.BContent[j].BInodo = -1;
+                memset(block.BContent[j].BName,0,12);
+            }
+
+            strcpy(block.BContent[0].BName,name.c_str());
+            block.BContent[0].BInodo = inodeIndex;
+
+            parent.IBlock[i] = newBlock;
+
+            file.seekp(sb.SBlockStart + newBlock*sizeof(BloqueCarpeta));
+            file.write(reinterpret_cast<char*>(&block),sizeof(BloqueCarpeta));
+
+            file.seekp(sb.SInodeStart + parentIndex*sizeof(Inodo));
+            file.write(reinterpret_cast<char*>(&parent),sizeof(Inodo));
+
+            sb.SFirstBlo++;
+
+            return true;
+        }
 
         BloqueCarpeta block;
         file.seekg(sb.SBlockStart + parent.IBlock[i] * sizeof(BloqueCarpeta));
         file.read(reinterpret_cast<char*>(&block), sizeof(BloqueCarpeta));
 
         for (int j = 0; j < 4; j++) {
+
             if (block.BContent[j].BInodo == -1) {
+
                 strcpy(block.BContent[j].BName, name.c_str());
                 block.BContent[j].BInodo = inodeIndex;
 
                 file.seekp(sb.SBlockStart + parent.IBlock[i] * sizeof(BloqueCarpeta));
                 file.write(reinterpret_cast<char*>(&block), sizeof(BloqueCarpeta));
+
                 return true;
             }
         }
@@ -217,12 +245,20 @@ bool createFolder(std::fstream& file, SuperBloque& sb,
 
     Inodo inode{};
     inode.IType = '0';
-  strcpy(inode.IPerm, "664");
+    strcpy(inode.IPerm, "664");
 
-    for (int i = 0; i < 15; i++) inode.IBlock[i] = -1;
+    for (int i = 0; i < 15; i++)
+        inode.IBlock[i] = -1;
+
     inode.IBlock[0] = blockIndex;
 
     BloqueCarpeta block{};
+
+    for (int i = 0; i < 4; i++) {
+        block.BContent[i].BInodo = -1;
+        memset(block.BContent[i].BName, 0, sizeof(block.BContent[i].BName));
+    }
+
     strcpy(block.BContent[0].BName, ".");
     block.BContent[0].BInodo = inodeIndex;
 
@@ -235,10 +271,12 @@ bool createFolder(std::fstream& file, SuperBloque& sb,
     file.seekp(sb.SBlockStart + blockIndex * sizeof(BloqueCarpeta));
     file.write(reinterpret_cast<char*>(&block), sizeof(BloqueCarpeta));
 
-    addEntryToFolder(file, sb, parentIndex, name, inodeIndex);
+    if (!addEntryToFolder(file, sb, parentIndex, name, inodeIndex)) {
+        return false;
+    }
 
     sb.SFirstIno++;
-    sb.SFirstBlo--;
+    sb.SFirstBlo++;
 
     return true;
 }
@@ -257,13 +295,19 @@ bool createFile(std::fstream& file, SuperBloque& sb,
     Inodo inode{};
     inode.IType = '1';
     strcpy(inode.IPerm, "664");
+
     inode.ISize = content.size();
 
-    for (int i = 0; i < 15; i++) inode.IBlock[i] = -1;
+    for (int i = 0; i < 15; i++)
+        inode.IBlock[i] = -1;
+
     inode.IBlock[0] = blockIndex;
 
     BloqueArchivo block{};
-    memcpy(block.BContent, content.c_str(),
+    memset(block.BContent, 0, sizeof(block.BContent));
+
+    memcpy(block.BContent,
+           content.c_str(),
            std::min(content.size(), sizeof(block.BContent)));
 
     file.seekp(sb.SInodeStart + inodeIndex * sizeof(Inodo));
@@ -272,10 +316,12 @@ bool createFile(std::fstream& file, SuperBloque& sb,
     file.seekp(sb.SBlockStart + blockIndex * sizeof(BloqueArchivo));
     file.write(reinterpret_cast<char*>(&block), sizeof(BloqueArchivo));
 
-    addEntryToFolder(file, sb, parentIndex, name, inodeIndex);
+    if (!addEntryToFolder(file, sb, parentIndex, name, inodeIndex)) {
+        return false;
+    }
 
     sb.SFirstIno++;
-    sb.SFirstBlo--;
+    sb.SFirstBlo++;
 
     return true;
 }
@@ -285,18 +331,26 @@ bool createFile(std::fstream& file, SuperBloque& sb,
 // ===================== CREAR PADRES =====================
 
 bool createParentFolders(std::fstream& file, SuperBloque& sb, const std::string& path) {
+
     auto parts = splitPath(path);
+
     int current = 0;
 
-    std::string temp = "";
-
     for (auto& part : parts) {
-        temp += "/" + part;
 
-        int found = findFolderInode(file, sb, temp);
-        if (found == -1) {
-            createFolder(file, sb, current, part);
-            found = findFolderInode(file, sb, temp);
+        Inodo inode;
+
+        file.seekg(sb.SInodeStart + current*sizeof(Inodo));
+        file.read(reinterpret_cast<char*>(&inode),sizeof(Inodo));
+
+        int found = findFolderInode(file,sb,"/"+part);
+
+        if(found == -1){
+
+            if(!createFolder(file,sb,current,part))
+                return false;
+
+            found = sb.SFirstIno - 1;
         }
 
         current = found;
@@ -364,7 +418,13 @@ bool Mkfile(const std::string& path, bool rFlag, int size, const std::string& co
         return false;
     }
 
+    if (size < 0) {
+        common::AddError("[MKFILE] size no puede ser negativo");
+        return false;
+    }
+
     MountedPartition* mp = getMountById(CurrentSesion.ID);
+
     if (!mp) {
         common::AddError("[MKFILE] Partición no montada");
         return false;
@@ -372,48 +432,73 @@ bool Mkfile(const std::string& path, bool rFlag, int size, const std::string& co
 
     std::fstream file(mp->Path, std::ios::in | std::ios::out | std::ios::binary);
 
+    if (!file.is_open()) {
+        common::AddError("[MKFILE] Error abriendo disco");
+        return false;
+    }
+
     SuperBloque sb;
+
     file.seekg(mp->Start);
     file.read(reinterpret_cast<char*>(&sb), sizeof(SuperBloque));
 
     std::string parentPath = getParentPath(path);
+
     int parent = findFolderInode(file, sb, parentPath);
 
-if (parent == -1) {
-    if (!rFlag) {
-        common::AddError("[MKFILE] Carpeta padre no existe");
-        return false;
+    if (parent == -1) {
+
+        if (!rFlag) {
+            common::AddError("[MKFILE] Carpeta padre no existe");
+            return false;
+        }
+
+        if (!createParentFolders(file, sb, parentPath)) {
+            common::AddError("[MKFILE] Error creando carpetas padre");
+            return false;
+        }
+
+        parent = findFolderInode(file, sb, parentPath);
     }
-
-    createParentFolders(file, sb, parentPath);
-
-    // 🔥 GUARDAR SB DESPUÉS DE CREAR PADRES
-    file.seekp(mp->Start);
-    file.write(reinterpret_cast<char*>(&sb), sizeof(SuperBloque));
-
-    parent = findFolderInode(file, sb, parentPath);
-}
 
     std::string content;
 
+    // PRIORIDAD CONT
     if (!cont.empty()) {
+
         std::ifstream ext(cont);
+
         if (!ext.is_open()) {
             common::AddError("[MKFILE] Archivo externo no existe");
             return false;
         }
+
         std::stringstream buffer;
         buffer << ext.rdbuf();
+
         content = buffer.str();
-    } else if (size > 0) {
+    }
+    else if (size > 0) {
+
         for (int i = 0; i < size; i++) {
             content += char('0' + (i % 10));
         }
     }
+int exist = findFolderInode(file,sb,path);
 
-    createFile(file, sb, parent, getFileName(path), content);
-file.seekp(mp->Start);
-file.write(reinterpret_cast<char*>(&sb), sizeof(SuperBloque));
+if(exist != -1){
+    common::AddError("[MKFILE] Archivo ya existe");
+    return false;
+}
+    if (!createFile(file, sb, parent, getFileName(path), content)) {
+        common::AddError("[MKFILE] Error creando archivo");
+        return false;
+    }
+
+    file.seekp(mp->Start);
+    file.write(reinterpret_cast<char*>(&sb), sizeof(SuperBloque));
+
     common::AddSuccess("[MKFILE] Archivo creado");
+
     return true;
 }

@@ -4,6 +4,7 @@
 #include <regex>
 #include "pdisk.h"
 #include "pfilesystem.h"
+#include "reports.h"
 std::vector<std::string> tokenize(const std::string &input)
 {
     std::vector<std::string> tokens;
@@ -110,19 +111,19 @@ void ParseCommand(const std::string &input)
     {
         parseChgrp(tokens);
     }
-     else if (lower.rfind("mkdir", 0) == 0) {
-            parseMkdir(tokens);
-        } else if (lower.rfind("mkfile", 0) == 0) {
+    else if (lower.rfind("mkdir", 0) == 0)
+    {
+        parseMkdir(tokens);
+    }
+    else if (lower.rfind("mkfile", 0) == 0)
+    {
 
-    
-            parseMkfile(tokens);
-        }
-        /*/} else if (lower.rfind("rep", 0) == 0) {
-            parseRep(tokens);*/
+        parseMkfile(tokens);
+    }
+     else if (lower.rfind("rep", 0) == 0) {
+        parseRep(tokens);
 
-
-      
-    
+    }
     else
     {
         common::AddError("Error de sintaxis: comando no reconocido -> " + input);

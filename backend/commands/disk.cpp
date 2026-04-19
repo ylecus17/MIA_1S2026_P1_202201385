@@ -42,7 +42,7 @@ string currentDate(){
 }
 
 bool MkDisk(int size, std::string unit, std::string path, std::string fit) {
-    common::AddInfo("[MKDISK] Iniciando proceso de creación de disco");
+    common::AddInfo("[MKDISK] Iniciando proceso de creacion de disco");
 
     // Crear directorios
     filesystem::create_directories(filesystem::path(path).parent_path());
@@ -52,10 +52,9 @@ bool MkDisk(int size, std::string unit, std::string path, std::string fit) {
     int sizeBytes;
     if (unit == "K") {
         sizeBytes = size * 1024;
-        common::AddInfo("[MKDISK] Unidad K seleccionada, tamaño en bytes: " + std::to_string(sizeBytes));
+      
     } else {
         sizeBytes = size * 1024 * 1024;
-        common::AddInfo("[MKDISK] Unidad M seleccionada, tamaño en bytes: " + std::to_string(sizeBytes));
     }
 
     // Crear archivo binario y escribir ceros
@@ -66,14 +65,12 @@ bool MkDisk(int size, std::string unit, std::string path, std::string fit) {
         common::AddError("[MKDISK] Error abriendo archivo en " + path);
         return false;
     }
-    common::AddInfo("[MKDISK] Archivo abierto correctamente");
 
     // Escribir bloques de ceros
     vector<char> zeros(1024, 0);
     for (int i = 0; i < sizeBytes / 1024; i++) {
         file.write(zeros.data(), 1024);
     }
-    common::AddInfo("[MKDISK] Espacio inicial reservado con ceros");
 
 // Crear MBR
 MBR mbr{};

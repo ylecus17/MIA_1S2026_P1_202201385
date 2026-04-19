@@ -42,7 +42,6 @@ bool Mkfs(const std::string &id, const std::string &fstype)
     // Buscar partición por PartID
    // Buscar partición por nombre (el que guardó mount)
 Partition *part = nullptr;
-
 for (int i = 0; i < 4; i++)
 {
     std::string pname(mbr.Partitions[i].PartName);

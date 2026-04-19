@@ -40,7 +40,7 @@ struct Inodo {
 
 // ---------------- BLOQUE CARPETA ----------------
 struct Content {
-    char    BName[12];    // Nombre de archivo/carpeta (máx 12 chars)
+    char    BName[20];    // Nombre de archivo/carpeta (máx 12 chars)
     int32_t BInodo;       // Apuntador al inodo
 };
 

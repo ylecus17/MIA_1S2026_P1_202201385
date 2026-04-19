@@ -11,8 +11,7 @@
 using namespace std;
 
 void parseMkdisk(const std::vector<std::string>& tokens) {
-    std::cout << "[DEBUG] Entré a parseMkdisk con " 
-              << tokens.size() << " tokens" << std::endl;
+       
 
     int size = -1;
     std::string unit = "K";
@@ -21,7 +20,8 @@ void parseMkdisk(const std::vector<std::string>& tokens) {
 
     regex re("^-([a-zA-Z]+)=(.+)$");
 
-    for (int i = 1; i < tokens.size(); i++) {
+    for (size_t i = 1; i < tokens.size(); i++) {
+        
         smatch match;
         if (regex_match(tokens[i], match, re)) {
             std::string param = match[1];
@@ -32,7 +32,7 @@ void parseMkdisk(const std::vector<std::string>& tokens) {
 
             if (param == "size") {
                 size = stoi(value);
-                common::AddInfo("Parámetro size aceptado: " + value);
+                
             } else if (param == "unit") {
                 transform(value.begin(), value.end(), value.begin(), ::toupper);
                 if (value != "K" && value != "M") {
@@ -40,10 +40,10 @@ void parseMkdisk(const std::vector<std::string>& tokens) {
                     return;
                 }
                 unit = value;
-                common::AddInfo("Parámetro unit aceptado: " + unit);
+               
             } else if (param == "path") {
                 path = value;
-                common::AddInfo("Parámetro path aceptado: " + path);
+                
             } else if (param == "fit") {
                 transform(value.begin(), value.end(), value.begin(), ::toupper);
                 if (value != "BF" && value != "FF" && value != "WF") {
@@ -51,7 +51,7 @@ void parseMkdisk(const std::vector<std::string>& tokens) {
                     return;
                 }
                 fit = value;
-                common::AddInfo("Parámetro fit aceptado: " + fit);
+                
             }
         }
     }
@@ -88,7 +88,7 @@ void parseRmdisk(const std::vector<std::string>& tokens) {
 
             if (param == "path") {
                 path = value;
-                common::AddInfo("Parámetro path aceptado: " + path);
+
             } else {
                 common::AddError("Error de sintaxis: parámetro desconocido " + param);
                 return;
@@ -130,7 +130,7 @@ void parseFdisk(const std::vector<std::string>& tokens) {
 
             if (param == "size") {
                 size = std::stoi(value);
-                common::AddInfo("Parámetro size aceptado: " + value);
+               
             } else if (param == "unit") {
                 std::transform(value.begin(), value.end(), value.begin(), ::toupper);
                 if (value != "B" && value != "K" && value != "M") {
@@ -138,13 +138,13 @@ void parseFdisk(const std::vector<std::string>& tokens) {
                     return;
                 }
                 unit = value;
-                common::AddInfo("Parámetro unit aceptado: " + unit);
+                
             } else if (param == "path") {
                 path = value;
                 common::AddInfo("Parámetro path aceptado: " + path);
             } else if (param == "name") {
                 name = value;
-                common::AddInfo("Parámetro name aceptado: " + name);
+                
             } else if (param == "type") {
                 std::transform(value.begin(), value.end(), value.begin(), ::toupper);
                 if (value != "P" && value != "E" && value != "L") {
@@ -152,7 +152,7 @@ void parseFdisk(const std::vector<std::string>& tokens) {
                     return;
                 }
                 ptype = value;
-                common::AddInfo("Parámetro type aceptado: " + ptype);
+                
             } else if (param == "fit") {
                 std::transform(value.begin(), value.end(), value.begin(), ::toupper);
                 if (value != "BF" && value != "FF" && value != "WF") {
@@ -160,7 +160,7 @@ void parseFdisk(const std::vector<std::string>& tokens) {
                     return;
                 }
                 fit = value;
-                common::AddInfo("Parámetro fit aceptado: " + fit);
+                
             } else {
                 common::AddError("Error de sintaxis: parámetro desconocido " + param);
                 return;

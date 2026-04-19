@@ -1,12 +1,24 @@
 #include "crow.h"
 #include "json.hpp"
-#include "parser/mainparser.h"   // tu parser central
-#include "common/log.h"   // sistema de logs
+#include "parser/mainparser.h"
+#include "common/log.h"
 
 #include <iostream>
 #include <string>
 
 using json = nlohmann::json;
+
+// Función para sanear cadenas (elimina bytes no válidos en UTF-8)
+std::string sanitize(const std::string& input) {
+    std::string out;
+    for (unsigned char c : input) {
+        if (c < 128) { // solo ASCII seguro
+            out.push_back(c);
+        }
+        // aquí podrías agregar lógica para mapear otros caracteres válidos en UTF-8
+    }
+    return out;
+}
 
 int main() {
     crow::SimpleApp app;
@@ -17,25 +29,21 @@ int main() {
         crow::response res;
         res.code = 200;
 
-        // Cabeceras CORS
         res.set_header("Content-Type", "application/json");
         res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
         res.set_header("Access-Control-Allow-Methods", "POST");
 
-        // Leer el texto enviado desde el frontend
         std::string texto = req.body;
 
-        // Pasar el texto al parser
         auto logs = ParseCommands(texto);
 
-        // Convertir la salida de logs en JSON
         json response;
         response["output"] = json::array();
         for (const auto& log : logs) {
             response["output"].push_back({
-                {"level", log.level},
-                {"text", log.text}
+                {"level", sanitize(log.level)},
+                {"text", sanitize(log.text)}
             });
         }
 
