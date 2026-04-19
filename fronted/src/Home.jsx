@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import './Home.css';
 
-function Home() {
+function Home({ textoEntrada, setTextoEntrada, salida, setSalida }) {
   const [nombreArchivo, setNombreArchivo] = useState('');
-  const [salida, setSalida] = useState([]); // ahora es array de mensajes
-  const [textoEntrada, setTextoEntrada] = useState('');
   const refInputArchivo = useRef(null);
-  const refSalida = useRef(null); // referencia al área de salida
+  const refSalida = useRef(null);
 
   // Efecto: cada vez que cambie salida, hacer scroll al final
   useEffect(() => {
@@ -30,26 +28,25 @@ function Home() {
       setTextoEntrada('');
     }
   };
-const manejarEjecucion = async () => {
-  if (textoEntrada.trim()) {
-    try {
-      const res = await fetch("http://localhost:5300/execute", {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" }, // o "application/json"
-        body: textoEntrada
-      });
 
-      const data = await res.json();
+  const manejarEjecucion = async () => {
+    if (textoEntrada.trim()) {
+      try {
+        const res = await fetch("http://localhost:5300/execute", {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: textoEntrada
+        });
 
-      setSalida(data.output); // ← ahora recibes el array con level/text
-    } catch (error) {
-      setSalida([{ level: 'error', text: `Error al conectar con backend: ${error.message}` }]);
+        const data = await res.json();
+        setSalida(data.output);
+      } catch (error) {
+        setSalida([{ level: 'error', text: `Error al conectar con backend: ${error.message}` }]);
+      }
+    } else {
+      setSalida([{ level: 'info', text: 'Por favor ingresa texto o selecciona un archivo primero' }]);
     }
-  } else {
-    setSalida([{ level: 'info', text: 'Por favor ingresa texto o selecciona un archivo primero' }]);
-  }
-};
-
+  };
 
   const manejarLimpiar = () => {
     setNombreArchivo('');
@@ -62,18 +59,17 @@ const manejarEjecucion = async () => {
 
   return (
     <div className="contenedor-inicio">
-      {/* Encabezado con botones */}
       <header className="encabezado">
         <div className="grupo-botones">
           <div className="contenedor-input-archivo">
             <input
-  type="file"
-  id="inputArchivo"
-  ref={refInputArchivo}
-  onChange={manejarCambioArchivo}
-  className="input-archivo"
-  accept=".smia" // ← solo permite archivos .smia
-/>
+              type="file"
+              id="inputArchivo"
+              ref={refInputArchivo}
+              onChange={manejarCambioArchivo}
+              className="input-archivo"
+              accept=".smia"
+            />
             <label htmlFor="inputArchivo" className="boton-archivo">
               <span className="icono-archivo">📄</span>
               Elegir archivo
@@ -90,7 +86,6 @@ const manejarEjecucion = async () => {
         </div>
       </header>
 
-      {/* Áreas de texto */}
       <main className="contenedor-areas-texto">
         <div className="contenedor-area">
           <label htmlFor="areaEntrada" className="etiqueta-area">Área de Entrada</label>
@@ -105,10 +100,7 @@ const manejarEjecucion = async () => {
 
         <div className="contenedor-area">
           <label className="etiqueta-area">Área de Salida</label>
-          <div
-            ref={refSalida}
-            className="area-salida-consola"
-          >
+          <div ref={refSalida} className="area-salida-consola">
             {salida.map((msg, idx) => (
               <div key={idx} className={`log-${msg.level}`}>
                 {msg.text}

@@ -10,6 +10,15 @@
 
 #include "../structures/disk.h"
 #include "../common/log.h"
+struct Disk {
+    std::string name;   // nombre del disco (ej. "disco1")
+    char fit;           // 'F' = First Fit, 'B' = Best Fit, 'W' = Worst Fit
+    long sizeBytes;     // tamaño en bytes
+    std::string path;   // ruta del archivo físico en el sistema
+};
+//lista global de discos 
+std::vector<Disk> disks;
+
 // Prototipos de funciones auxiliares
 bool createPrimary(MBR* mbr, std::fstream& file, int32_t sizeBytes,
                    const std::string& name, const std::string& fit, const std::string& path);
@@ -73,7 +82,11 @@ bool MkDisk(int size, std::string unit, std::string path, std::string fit) {
     }
 
 // Crear MBR
+// aca mandamos a llamar a la estructura MBR y la llenamos con los datos necesarios para luego escribirla al inicio del disco, esto es importante para luego poder manejar las particiones dentro del disco
+// para llamar a una estructura, se crea una variable del tipo de la estructura, en este caso MBR, y luego se llenan sus campos con los datos necesarios, como el tamaño del disco, la fecha de creación, la firma del disco, el tipo de ajuste y las particiones vacías
 MBR mbr{};
+
+// mbr{} significa que es una lista de inicialización que inicializa todos los campos de la estructura MBR a sus valores predeterminados (cero para enteros, caracteres nulos para cadenas, etc.), esto es importante para asegurarnos de que no haya datos basura en la estructura antes de llenarla con los datos necesarios
 mbr.MbrSize = sizeBytes;
 
 // fecha actual
@@ -95,12 +108,36 @@ for (int i = 0; i < 4; i++) {
     std::memset(mbr.Partitions[i].PartName, 0, sizeof(mbr.Partitions[i].PartName));
     std::memset(mbr.Partitions[i].PartID, 0, sizeof(mbr.Partitions[i].PartID));
 }
-
+// solo crea un mbr por comando 
+// para llamar a esta lista de 
 // escribir MBR al inicio del archivo
 file.seekp(0, std::ios::beg);
 file.write(reinterpret_cast<char*>(&mbr), sizeof(MBR));
+// el sizeof(MBR) es importante porque nos dice cuanto espacio ocupa el MBR en el disco, esto es importante para luego poder manejar las particiones dentro del disco, ya que el MBR se encuentra al inicio del disco y contiene la información de las particiones, por lo que es necesario saber cuanto espacio ocupa para luego poder escribir las particiones después del MBR
 file.close();
+// Verificar si ya existe un disco con el mismo path
+auto it = std::find_if(disks.begin(), disks.end(),
+    [&](const Disk& d){ return d.path == path; });
 
+if (it != disks.end()) {
+    common::AddError("[MKDISK] Ya existe un disco registrado en la ruta: " + path);
+    return false; // no lo agregamos de nuevo
+}
+    Disk newDisk;
+    newDisk.name = filesystem::path(path).stem().string(); // nombre sin extensión
+    newDisk.fit = mbr.DskFit;
+    newDisk.sizeBytes = sizeBytes;
+    newDisk.path = path;
+
+    disks.push_back(newDisk);
+    std::cout << "\n=== Lista de discos creados ===\n";
+    for (const auto& d : disks) {
+        std::cout << "Nombre: " << d.name
+                  << " | Fit: " << d.fit
+                  << " | Tamaño: " << d.sizeBytes
+                  << " bytes | Path: " << d.path << "\n";
+    }
+    std::cout << "===============================\n";
     common::AddSuccess("[MKDISK] Disco creado correctamente en " + path);
     return true;
 }

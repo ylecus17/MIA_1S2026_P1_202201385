@@ -2,25 +2,31 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -O2 -Wall
 
-# Busca todos los .cpp en subcarpetas
-SRC = $(wildcard *.cpp api/*.cpp commands/*.cpp common/*.cpp parser/*.cpp structures/*.cpp)
+# Carpetas
+SRC_DIRS = . api commands common parser structures
+BUILD_DIR = build
 
-OBJ = $(SRC:.cpp=.o)
+# Buscar todos los .cpp
+SRC = $(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.cpp))
 
-# Nombre del ejecutable
+# Convertir rutas a .o dentro de build/
+OBJ = $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SRC))
+
+# Ejecutable
 TARGET = server
 
 # Regla principal
 all: $(TARGET)
 
-# Cómo construir el ejecutable
+# Crear ejecutable
 $(TARGET): $(OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Cómo compilar cada .cpp a .o
-%.o: %.cpp
+# Regla para compilar .cpp → .o en build/
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Limpiar archivos generados
+# Limpiar
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -rf $(BUILD_DIR) $(TARGET)
