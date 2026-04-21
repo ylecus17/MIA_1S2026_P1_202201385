@@ -2,10 +2,35 @@
   padding: 20px;
 }
 
-.contenedor-discos h2 {
-  color: #2c3e50;
+.grid-discos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
 }
 
-.contenedor-discos p {
-  color: #7f8c8d;
+.tarjeta-disco {
+  width: 120px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.tarjeta-disco:hover {
+  transform: scale(1.05);
+}
+
+.imagen-disco {
+  width: 80px;
+  height: 80px;
+}
+
+.nombre-disco {
+  margin-top: 8px;
+  font-weight: bold;
+}
+
+.propiedades-disco {
+  margin-top: 30px;
+  padding: 15px;
+  border-top: 2px solid #ccc;
 }

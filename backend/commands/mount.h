@@ -21,6 +21,7 @@ extern std::vector<MountedPartition> mountedPartitions;
 // Funciones públicas del módulo mount
 bool Mount(const std::string& path, const std::string& name);
 void Mounted();
+bool Unmount(const std::string& id);
 MountedPartition* getMountById(const std::string& id);
 
 #endif // MOUNT_H

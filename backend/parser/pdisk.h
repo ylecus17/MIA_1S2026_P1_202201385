@@ -7,3 +7,4 @@ void parseRmdisk(const std::vector<std::string>& tokens);
 void parseFdisk(const std::vector<std::string>& tokens);
 void parseMount(const std::vector<std::string>& tokens);
 void parseMounted(const std::vector<std::string>& tokens);
+void parseUnmount(const std::vector<std::string>& tokens);

@@ -74,6 +74,10 @@ void ParseCommand(const std::string &input)
     else if (lower.rfind("mount", 0) == 0)
     {
         parseMount(tokens);
+    }  
+    else if (lower.rfind("unmount", 0) == 0) {
+        parseUnmount(tokens);
+
     }
     else if (lower.rfind("mkfs", 0) == 0)
     {
