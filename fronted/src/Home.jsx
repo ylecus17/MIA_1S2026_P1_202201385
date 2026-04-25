@@ -1,17 +1,40 @@
 import { useState, useRef, useEffect } from 'react';
 import './Home.css';
+import { useNavigate } from "react-router-dom";
 
-function Home({ textoEntrada, setTextoEntrada, salida, setSalida }) {
+function Home({ textoEntrada, setTextoEntrada, salida, setSalida, loginStatus, setLoginStatus }) {
   const [nombreArchivo, setNombreArchivo] = useState('');
   const refInputArchivo = useRef(null);
   const refSalida = useRef(null);
+  const navigate = useNavigate();
 
-  // Efecto: cada vez que cambie salida, hacer scroll al final
   useEffect(() => {
     if (refSalida.current) {
       refSalida.current.scrollTop = refSalida.current.scrollHeight;
     }
   }, [salida]);
+
+  const manejarLogout = async () => {
+    try {
+      const token = loginStatus?.token || localStorage.getItem("token");
+      const res = await fetch("http://localhost:5300/api/logout", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + token }
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setSalida([{ level: "info", text: "Sesión cerrada correctamente" }]);
+        setLoginStatus(null);
+        localStorage.removeItem("token");
+      } else {
+        setSalida([{ level: "error", text: `Error: ${data.error}` }]);
+      }
+    } catch (error) {
+      setSalida([{ level: "error", text: `Error al conectar con backend: ${error.message}` }]);
+    }
+  };
 
   const manejarCambioArchivo = async (e) => {
     const archivo = e.target.files[0];
@@ -82,6 +105,12 @@ function Home({ textoEntrada, setTextoEntrada, salida, setSalida }) {
           <div className="botones-accion">
             <button onClick={manejarEjecucion} className="boton-ejecutar">Ejecutar</button>
             <button onClick={manejarLimpiar} className="boton-limpiar">Limpiar</button>
+
+            {loginStatus ? (
+              <button onClick={manejarLogout} className="boton-logout">Logout</button>
+            ) : (
+              <button onClick={() => navigate("/login")} className="boton-login">Login</button>
+            )}
           </div>
         </div>
       </header>

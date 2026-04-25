@@ -16,9 +16,8 @@ struct Sesion {
 // Declaración global (extern) → se define en login.cpp
 extern Sesion CurrentSesion;
 
-bool Login(const std::string& user, const std::string& pass, const std::string& id);
-
-bool Logout();
+bool Login(const std::string &user, const std::string &pass, const std::string &id, std::string &message);
+bool Logout(std::string &message);
 void SetSesion(const std::string& user, const std::string& id);
 void ClearSesion();
 bool IsLogged();

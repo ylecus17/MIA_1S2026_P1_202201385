@@ -1,10 +1,9 @@
-// commands/login.cpp
 #include "../common/log.h"
 #include "mount.h"
 #include "../structures/filesystem.h"
 #include "../structures/disk.h"
 #include "login.h"
-#include "mkfs.h" // aquí está la declaración de getMountById
+#include "mkfs.h" 
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -12,126 +11,199 @@
 #include <cstring>
 #include <algorithm>
 
+// ---------------- VARIABLE GLOBAL DE SESIÓN ----------------
 Sesion CurrentSesion;
+// ---------------- AUXILIARES ----------------
 
-// ---------------- LOGIN ----------------
-bool Login(const std::string &user, const std::string &pass, const std::string &id)
+// Leer un inodo desde disco
+Inodo readInode(std::fstream &file, int offset)
 {
+    Inodo inode;
+    file.seekg(offset, std::ios::beg);
+    file.read(reinterpret_cast<char *>(&inode), sizeof(inode));
+    return inode;
+}
+
+// Buscar el inodo de un archivo dentro de un directorio
+int findFileInode(std::fstream &file, const Inodo &dirInode, const SuperBloque &sb, const std::string &filename)
+{
+    for (int i = 0; i < 15; i++)
+    {
+        if (dirInode.IBlock[i] == -1)
+            continue;
+
+        BloqueCarpeta block;
+        int offset = sb.SBlockStart + dirInode.IBlock[i] * sizeof(block);
+
+        file.seekg(offset, std::ios::beg);
+        file.read(reinterpret_cast<char *>(&block), sizeof(block));
+
+        for (auto &entry : block.BContent)
+        {
+            std::string name(entry.BName);
+            name.erase(std::remove(name.begin(), name.end(), '\0'), name.end());
+
+            if (name == filename)
+            {
+                return entry.BInodo;
+            }
+        }
+    }
+    return -1;
+}
+
+// Leer contenido de archivo (users.txt) usando ISize
+std::string readFileContent(std::fstream &file, const Inodo &inode, const SuperBloque &sb)
+{
+    std::string content;
+    int remaining = inode.ISize;
+
+    for (int i = 0; i < 15 && remaining > 0; i++)
+    {
+        if (inode.IBlock[i] == -1)
+            continue;
+
+        BloqueArchivo block{};
+        int offset = sb.SBlockStart + inode.IBlock[i] * sizeof(block);
+
+        file.seekg(offset, std::ios::beg);
+        file.read(reinterpret_cast<char*>(&block), sizeof(BloqueArchivo));
+
+        int toCopy = std::min(remaining, (int)sizeof(block.BContent));
+        content.append(block.BContent, toCopy);
+
+        remaining -= toCopy;
+    }
+
+    return content;
+}
+
+// 
+// ---------------- LOGIN ----------------
+// Recibe usuario, contraseña e ID de partición
+bool Login(const std::string &user, const std::string &pass, const std::string &id, std::string &message)
+{
+    // 1. Verificar si ya hay sesión activa
     if (CurrentSesion.Status)
     {
-        common::AddInfo("[LOGIN] Ya hay una sesión activa: " + CurrentSesion.User);
+        message = "Ya hay una sesión activa: " + CurrentSesion.User;
+        common::AddInfo("[LOGIN] " + message);
         return false;
     }
 
-    // Buscar partición montada en RAM
+    // 2. Buscar partición montada en RAM
     MountedPartition *mp = getMountById(id);
     if (!mp)
     {
-        common::AddInfo("[LOGIN] Partición " + id + " no está montada");
+        message = "Partición " + id + " no está montada";
+        common::AddError("[LOGIN] " + message);
         return false;
     }
 
+    // 3. Abrir archivo del disco
     std::fstream file(mp->Path, std::ios::in | std::ios::binary);
     if (!file.is_open())
     {
-        common::AddError("[LOGIN] Error abriendo disco: " + mp->Path);
+        message = "Error abriendo disco";
+        common::AddError("[LOGIN] " + mp->Path);
         return false;
     }
 
-    // Leer MBR
+    // 4. Leer MBR
     MBR mbr;
     file.seekg(0, std::ios::beg);
     file.read(reinterpret_cast<char *>(&mbr), sizeof(mbr));
-
-    // Buscar partición por ID
+    // 5. Buscar la partición dentro del MBR
     Partition *part = nullptr;
-
     for (int i = 0; i < 4; i++)
-{
-    std::string pname(mbr.Partitions[i].PartName);
-    auto pos = std::find(pname.begin(), pname.end(), '\0');
-    if (pos != pname.end())
-        pname.erase(pos, pname.end());
+    {
+        std::string pname(mbr.Partitions[i].PartName);
+        pname.erase(std::find(pname.begin(), pname.end(), '\0'), pname.end());
 
-    // Debug para ver qué hay en el MBR
-    common::AddInfo("[DEBUG] Revisando partición: " + pname +
-                    " status=" + std::string(1, mbr.Partitions[i].PartStatus) +
-                    " mountName=" + mp->Name + " mountID=" + mp->ID);
+        common::AddInfo("[DEBUG] Revisando partición: " + pname);
 
-    // Comparar con el nombre de la partición montada
-    if (pname == mp->Name) {
-        part = &mbr.Partitions[i];
-        break;
+        if (pname == mp->Name)
+        {
+            part = &mbr.Partitions[i];
+            break;
+        }
     }
-}
-
 
     if (part == nullptr)
     {
-        common::AddError("[LOGIN] Partición " + mp->ID + " no encontrada o no activa");
+        message = "Partición no encontrada en disco";
+        common::AddError("[LOGIN] " + message);
         return false;
     }
 
-    // Leer superbloque
+    // 6. Leer SuperBloque
     SuperBloque sb;
     file.seekg(part->PartStart, std::ios::beg);
     file.read(reinterpret_cast<char *>(&sb), sizeof(sb));
-
-    // Leer inodo raíz
+    // 7. Leer inodo raíz
     Inodo rootInode = readInode(file, sb.SInodeStart);
 
-    // Buscar inodo de users.txt
+    // 8. Buscar archivo users.txt en la raíz
     int userInodeIndex = findFileInode(file, rootInode, sb, "users.txt");
     if (userInodeIndex == -1)
     {
-        common::AddError("[LOGIN] Archivo users.txt no encontrado");
+        message = "Archivo users.txt no encontrado";
+        common::AddError("[LOGIN] " + message);
         return false;
     }
 
-    // Leer inodo de users.txt
+    // 9. Leer inodo de users.txt
     Inodo userInode = readInode(file, sb.SInodeStart + userInodeIndex * sizeof(Inodo));
 
-    // Leer contenido del archivo
+    // 10. Leer contenido del archivo usando ISize para evitar basura
     std::string content = readFileContent(file, userInode, sb);
 
-    // Validar usuario y contraseña
+    common::AddInfo("[DEBUG] users.txt:\n" + content);
+    // 11. Validar usuario y contraseña
     std::istringstream iss(content);
     std::string line;
+
     while (std::getline(iss, line))
     {
         std::vector<std::string> parts;
         std::stringstream ss(line);
         std::string token;
+
         while (std::getline(ss, token, ','))
         {
             parts.push_back(token);
         }
 
+        // formato esperado: id, tipo, grupo, user, pass
         if (parts.size() == 5 && parts[1] == "U")
         {
             if (parts[3] == user && parts[4] == pass)
             {
                 SetSesion(user, id);
+                message = "Login correcto";
                 return true;
             }
         }
     }
 
-    // Si no encontró coincidencia, mostrar qué usuario/contraseña se intentaron
-    common::AddError("[LOGIN] Usuario '" + user + "' con contraseña '" + pass + "' incorrectos en partición ID=" + id);
+    // 12. Si no se encontró el usuario
+    message = "Usuario o contraseña incorrectos";
+    common::AddError("[LOGIN] " + message);
     return false;
 }
-
 // ---------------- LOGOUT ----------------
-bool Logout()
+bool Logout(std::string &message)
 {
     if (!CurrentSesion.Status)
     {
-        common::AddError("[LOGOUT] No hay ninguna sesión activa");
+        message = "No hay sesión activa";
+        common::AddError("[LOGOUT] " + message);
         return false;
     }
 
-    common::AddInfo("[LOGOUT] Cerrando sesión de usuario " + CurrentSesion.User + " en partición " + CurrentSesion.ID);
+    message = "Sesión cerrada: " + CurrentSesion.User;
+    common::AddInfo("[LOGOUT] " + message);
+
     ClearSesion();
     return true;
 }
@@ -142,7 +214,8 @@ void SetSesion(const std::string &user, const std::string &id)
     CurrentSesion.User = user;
     CurrentSesion.ID = id;
     CurrentSesion.Status = true;
-    common::AddInfo("[SESION] Sesión iniciada: Usuario=" + user + ", ID=" + id);
+
+    common::AddInfo("[SESION] Usuario=" + user + " ID=" + id);
 }
 
 void ClearSesion()
@@ -154,54 +227,3 @@ bool IsLogged()
 {
     return CurrentSesion.Status;
 }
-
-// ---------------- AUXILIARES ----------------
-Inodo readInode(std::fstream &file, int offset)
-{
-    Inodo inode;
-    file.seekg(offset, std::ios::beg);
-    file.read(reinterpret_cast<char *>(&inode), sizeof(inode));
-    return inode;
-}
-
-int findFileInode(std::fstream &file, const Inodo &dirInode, const SuperBloque &sb, const std::string &filename)
-{
-    for (int i = 0; i < 15; i++)
-    {
-        if (dirInode.IBlock[i] == -1)
-            continue;
-        BloqueCarpeta block;
-        int offset = sb.SBlockStart + dirInode.IBlock[i] * sizeof(block);
-        file.seekg(offset, std::ios::beg);
-        file.read(reinterpret_cast<char *>(&block), sizeof(block));
-        for (auto &entry : block.BContent)
-        {
-            std::string name(entry.BName);
-            name.erase(std::remove(name.begin(), name.end(), '\0'), name.end());
-            if (name == filename)
-            {
-                return entry.BInodo;
-            }
-        }
-    }
-    return -1;
-}
-
-std::string readFileContent(std::fstream &file, const Inodo &inode, const SuperBloque &sb)
-{
-    std::string content;
-    for (int i = 0; i < 15; i++)
-    {
-        if (inode.IBlock[i] == -1)
-            continue;
-        BloqueArchivo block;
-        int offset = sb.SBlockStart + inode.IBlock[i] * sizeof(block);
-        file.seekg(offset, std::ios::beg);
-        file.read(reinterpret_cast<char *>(&block), sizeof(block));
-        content += std::string(block.BContent, sizeof(block.BContent));
-    }
-    content.erase(std::remove(content.begin(), content.end(), '\0'), content.end());
-    common::AddInfo("[DEBUG] Contenido de users.txt:\n" + content);
-    return content;
-}
-// Función local a login.cpp para buscar partición montada por ID

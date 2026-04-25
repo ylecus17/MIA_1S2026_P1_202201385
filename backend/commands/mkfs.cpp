@@ -8,6 +8,8 @@
 #include <ctime>
 #include <cstring>
 #include <algorithm>
+#include <iostream>
+#include <vector>
 
 // Buscar partición montada por ID
 
@@ -85,7 +87,10 @@ if (!part)
     SuperBloque sb = crearSuperbloque(n, inodeSize, blockSize, superSize, *part);
 
     // Escribir superbloque
+    //se usa ios por que  conecta con el disco y se mueve a la posición de inicio de la partición para escribir el superbloque, que es lo primero que se debe escribir en la partición después del MBR
+    //.seekp se usa para mover el puntero de escritura a la posición correcta, que es el inicio de la partición (part->PartStart). Luego se escribe el superbloque utilizando write, que toma la dirección del superbloque y su tamaño.
     file.seekp(part->PartStart, std::ios::beg);
+    //el reinterpret_cast
     file.write(reinterpret_cast<char *>(&sb), sizeof(SuperBloque));
 
     // Inicializar bitmaps
@@ -115,7 +120,7 @@ SuperBloque crearSuperbloque(int32_t n, int32_t inodeSize, int32_t blockSize, in
     sb.SFirstIno = 2;
     sb.SFirstBlo = 2;
     sb.SMntCount = 1;
-
+// esta parte es para llenar las fechas de montaje y desmontaje, aunque realmente no se usan en este proyecto, pero es para tener el formato correcto del superbloque
     std::time_t now = std::time(nullptr);
     std::string date = std::string(std::ctime(&now));
     std::memset(sb.SMtime, 0, sizeof(sb.SMtime));
@@ -136,6 +141,7 @@ void inicializarBitmaps(std::fstream &file, const SuperBloque &sb, int32_t n)
     file.seekp(sb.SBitmapInodeStart, std::ios::beg);
     for (int32_t i = 0; i < n; i++)
     {
+        // se escribe un byte con valor 0 para cada inodo, indicando que están libres. Esto se hace utilizando un bucle que itera n veces (el número total de inodos) y escribe un byte de valor 0 en cada posición del bitmap de inodos.
         char zero = 0;
         file.write(&zero, 1);
     }
@@ -169,7 +175,9 @@ void crearRaiz(std::fstream &file, const SuperBloque &sb)
     rootInode.IBlock[0] = 0; // apunta al bloque 0 (carpeta raíz)
 
     BloqueCarpeta rootBlock{};
+    //memset se utiliza para inicializar la estructura del bloque de carpeta raíz, estableciendo todos los bytes a cero. Luego, se configuran las entradas "." y ".." para que apunten al inodo raíz (inodo 0), y se prepara la entrada para "users.txt" apuntando al inodo 1. Esto asegura que la carpeta raíz tenga las referencias correctas a sí misma y al archivo de usuarios desde el inicio del sistema de archivos.
     std::memset(&rootBlock, 0, sizeof(rootBlock));
+    //memcpy se utiliza para copiar las cadenas de caracteres "." y ".." en las entradas correspondientes del bloque de carpeta raíz, asegurando que estas entradas tengan los nombres correctos. Además, se asignan los números de inodo apropiados para cada entrada, con "." apuntando al inodo raíz (0) y ".." también apuntando al inodo raíz (0), ya que la carpeta raíz es su propio padre. La entrada para "users.txt" se prepara con el nombre correcto y apunta al inodo 1, que se creará posteriormente para almacenar el archivo de usuarios.
     std::memcpy(rootBlock.BContent[0].BName, ".", 1);
     rootBlock.BContent[0].BInodo = 0;
     std::memcpy(rootBlock.BContent[1].BName, "..", 2);
@@ -232,4 +240,7 @@ void crearUsersTxt(std::fstream& file, const SuperBloque& sb) {
     // Escribir bloque de datos en posición 1
     file.seekp(sb.SBlockStart + 1 * sizeof(BloqueArchivo), std::ios::beg);
     file.write(reinterpret_cast<char*>(&usersBlock), sizeof(BloqueArchivo));
+
+   
 }
+

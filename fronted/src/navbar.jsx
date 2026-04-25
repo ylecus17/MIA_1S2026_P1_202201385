@@ -11,7 +11,9 @@ function Navbar() {
         </li>
         <li>
           <Link to="/discos">Discos</Link>
+        
         </li>
+
       </ul>
     </nav>
   );
